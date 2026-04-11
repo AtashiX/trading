@@ -41,7 +41,7 @@ git init
 git add .
 git commit -m "primer commit"
 git branch -M main
-git remote add origin https://github.com/TU_USUARIO/scalping-bot.git
+git remote add origin https://github.com/TU_USUARIO/scalping-bot.git (git remote add origin git@github-atax:AtashiX/trading.git)
 git push -u origin main
 ```
 
@@ -72,7 +72,7 @@ git push -u origin main
 6. Haz clic en **"Create Web Service"**
 
 Render tardará 2-3 minutos en desplegar. Cuando termine verás una URL tipo:
-`https://scalping-bot-xxxx.onrender.com`
+`https://scalping-bot-xxxx.onrender.com`(https://trading-o9ky.onrender.com)
 
 Entra en esa URL y verás el dashboard del bot.
 
@@ -87,7 +87,7 @@ cron-job.org lo pings cada 10 minutos para evitarlo, completamente gratis.
 2. Haz clic en **"Create cronjob"**
 3. Rellena:
    - **Title:** keep-bot-alive
-   - **URL:** `https://scalping-bot-xxxx.onrender.com/health`
+   - **URL:** `https://scalping-bot-xxxx.onrender.com/health`(https://trading-o9ky.onrender.com/health)
      (cambia xxxx por tu URL real de Render)
    - **Schedule:** Every 10 minutes
      (en el selector elige "Every" → "10 minutes")
