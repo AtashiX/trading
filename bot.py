@@ -88,7 +88,9 @@ def señal_entrada(df: pd.DataFrame) -> bool:
     cruce  = (prev["ema_r"] <= prev["ema_l"]) and (ult["ema_r"] > ult["ema_l"])
     rsi_ok = ult["rsi"] < config.RSI_SOBRECOMPRA
     vol_ok = ult["volume"] > ult["vol_media"]
-    return cruce and rsi_ok and vol_ok
+    if config.EXIGIR_VOLUMEN:
+        return cruce and rsi_ok and vol_ok
+    return cruce and rsi_ok
 
 
 # ─── Utilidades de trading ────────────────────────────────────────────────────

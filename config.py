@@ -64,11 +64,12 @@ SIMBOLOS = [
 ]
 
 # ─── Estrategia EMA + RSI + volumen ──────────────────────────────────────────
-EMA_RAPIDA     = 5      # EMA muy reactiva
-EMA_LENTA      = 13     # EMA de contexto
-RSI_PERIODO    = 7      # RSI corto para scalping
-RSI_SOBRECOMPRA = 60    # RSI > 60 → no entrar largo
-VOL_MEDIA_N    = 20     # Velas para calcular volumen medio
+EMA_RAPIDA      = 5     # EMA muy reactiva
+EMA_LENTA       = 8     # Bajado de 13: cruces mas frecuentes
+RSI_PERIODO     = 7     # RSI corto para scalping
+RSI_SOBRECOMPRA = 65    # Subido de 60: ventana de entrada mas amplia
+VOL_MEDIA_N     = 20    # Velas para calcular volumen medio
+EXIGIR_VOLUMEN  = False # False: no exigir confirmacion de volumen para entrar
 
 INTERVALO_BARS = "1Min"
 N_BARRAS       = 60     # Últimas 60 velas de 1 minuto
