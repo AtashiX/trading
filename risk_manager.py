@@ -7,7 +7,7 @@ import logging
 from datetime import date
 from config import (
     MAX_PERDIDA_DIARIA, MAX_PERDIDA_TOTAL, OBJETIVO_DIARIO, OBJETIVO_MENSUAL,
-    MAX_POSICIONES, RIESGO_POR_TRADE, STOP_LOSS_PCT, TAKE_PROFIT_PCT,
+    CAPITAL_INICIAL, MAX_POSICIONES, RIESGO_POR_TRADE, STOP_LOSS_PCT, TAKE_PROFIT_PCT,
     REINVERTIR_PCT, TRAILING_ACTIVAR, TRAILING_DISTANCIA_PCT,
     VOL_MULTIPLICADOR, MOMENTUM_MIN_PCT,
 )
@@ -116,7 +116,10 @@ class RiskManager:
 
     # ── Tamaño de posición ────────────────────────────────────────────────────
     def calcular_cantidad(self, precio: float, portfolio_value: float) -> float:
-        capital_en_riesgo  = portfolio_value * RIESGO_POR_TRADE
+        # Usar siempre el capital inicial como base, nunca el portfolio
+        # de Alpaca paper (que empieza en 400.000 USD ficticios)
+        capital_base      = min(portfolio_value, CAPITAL_INICIAL)
+        capital_en_riesgo = capital_base * RIESGO_POR_TRADE
         perdida_por_accion = precio * STOP_LOSS_PCT
         if perdida_por_accion <= 0:
             return 0.0
