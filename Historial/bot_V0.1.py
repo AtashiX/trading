@@ -211,7 +211,6 @@ def bucle_principal():
         time.sleep(config.SLEEP_SEGUNDOS)
 
 
-
 # ─── Dashboard Flask ──────────────────────────────────────────────────────────
 
 DASHBOARD_HTML = """<!DOCTYPE html>
@@ -242,31 +241,31 @@ code{font-family:monospace;font-size:11px;color:#aaa}
 <body>
 <h1>Scalping Bot</h1>
 <p class="sub">
-  Modo: <span class="badge {{ modo }}">{{ modo.upper() }}</span>
-  &nbsp;·&nbsp; {{ ahora }} &nbsp;·&nbsp; refresh 15s
+  Modo: <span class="badge {{modo}}">{{modo.upper()}}</span>
+  &nbsp;·&nbsp; {{ahora}} &nbsp;·&nbsp; refresh 15s
 </p>
 <div class="cards">
   <div class="card">
     <div class="card-label">PnL hoy</div>
-    <div class="card-value {{ clase_d }}">{{ pnl_diario }} USD</div>
+    <div class="card-value {{clase_d}}">{{pnl_diario}} USD</div>
   </div>
   <div class="card">
     <div class="card-label">Objetivo dia</div>
-    <div class="card-value {{ 'pos' if objetivo_ok else 'neu' }}">
-      {{ 'Alcanzado' if objetivo_ok else objetivo_diario|string + ' USD' }}
+    <div class="card-value {{'pos' if objetivo_ok else 'neu'}}">
+      {{'Alcanzado' if objetivo_ok else objetivo_diario|string + ' USD'}}
     </div>
   </div>
   <div class="card">
     <div class="card-label">PnL total</div>
-    <div class="card-value {{ clase_t }}">{{ pnl_total }} USD</div>
+    <div class="card-value {{clase_t}}">{{pnl_total}} USD</div>
   </div>
   <div class="card">
     <div class="card-label">Retiro disponible</div>
-    <div class="card-value neu">{{ retiro }} USD</div>
+    <div class="card-value neu">{{retiro}} USD</div>
   </div>
   <div class="card">
     <div class="card-label">Posiciones</div>
-    <div class="card-value neu">{{ n_pos }} / {{ max_pos }}</div>
+    <div class="card-value neu">{{n_pos}} / {{max_pos}}</div>
   </div>
 </div>
 
@@ -275,12 +274,12 @@ code{font-family:monospace;font-size:11px;color:#aaa}
   <tr><th>Simbolo</th><th>Qty</th><th>Entrada</th><th>Actual</th><th>PnL no realizado</th><th>Estado</th></tr>
   {% for p in posiciones %}
   <tr>
-    <td><strong>{{ p.symbol }}</strong></td>
-    <td>{{ p.qty }}</td>
-    <td><code>{{ p.avg_entry_price }}</code></td>
-    <td><code>{{ p.current_price }}</code></td>
-    <td class="{{ p.pl_clase }}">{{ p.pl_valor }} USD</td>
-    <td>{{ 'Trailing activo' if p.trailing else 'Esperando TP' }}</td>
+    <td><strong>{{p.symbol}}</strong></td>
+    <td>{{p.qty}}</td>
+    <td><code>{{p.avg_entry_price}}</code></td>
+    <td><code>{{p.current_price}}</code></td>
+    <td class="{{'pos' if float(p.unrealized_pl) >= 0 else 'neg'}}">{{p.unrealized_pl}} USD</td>
+    <td>{{'Trailing activo' if trailing.get(p.symbol) else 'Esperando TP'}}</td>
   </tr>
   {% else %}
   <tr><td colspan="6" style="color:#333;text-align:center;padding:16px">Sin posiciones abiertas</td></tr>
@@ -292,13 +291,12 @@ code{font-family:monospace;font-size:11px;color:#aaa}
   <tr><th>Hora</th><th>Simbolo</th><th>Lado</th><th>Qty</th><th>Precio</th><th>PnL</th><th>Motivo</th></tr>
   {% for t in trades %}
   <tr>
-    <td style="color:#555">{{ t.hora }}</td>
-    <td><strong>{{ t.simbolo }}</strong></td>
-    <td class="{{ 'pos' if t.lado == 'buy' else 'neg' }}">{{ t.lado.upper() }}</td>
-    <td>{{ t.cantidad }}</td>
-    <td><code>{{ t.precio }}</code></td>
-    <td class="{{ t.pl_clase }}">{{ t.pnl or '—' }}</td>
-    <td style="color:#555;font-size:10px">{{ t.motivo }}</td>
+    <td style="color:#555">{{t[0][11:19]}}</td>
+    <td><strong>{{t[1]}}</strong></td>
+    <td class="{{'pos' if t[2]=='buy' else 'neg'}}">{{t[2].upper()}}</td>
+    <td>{{t[3]}}</td><td><code>{{t[4]}}</code></td>
+    <td class="{{'pos' if t[5] and float(t[5]) >= 0 else 'neg'}}">{{t[5] or '—'}}</td>
+    <td style="color:#555;font-size:10px">{{t[6] if t|length > 6 else ''}}</td>
   </tr>
   {% else %}
   <tr><td colspan="7" style="color:#333;text-align:center;padding:16px">Sin trades aun</td></tr>
@@ -311,47 +309,17 @@ app = Flask(__name__)
 
 @app.route("/")
 def dashboard():
-    r = risk.resumen()
-
-    # Preprocesar posiciones en dicts simples (sin llamar float() en Jinja)
+    r          = risk.resumen()
     posiciones = []
     try:
-        for p in trading_client.get_all_positions():
-            pl = float(p.unrealized_pl)
-            posiciones.append({
-                "symbol":          p.symbol,
-                "qty":             p.qty,
-                "avg_entry_price": p.avg_entry_price,
-                "current_price":   p.current_price,
-                "pl_valor":        f"{pl:+.2f}",
-                "pl_clase":        "pos" if pl >= 0 else "neg",
-                "trailing":        r["trailing_activos"].get(p.symbol, False),
-            })
+        posiciones = trading_client.get_all_positions()
     except Exception:
         pass
-
-    # Preprocesar trades en dicts simples
     trades = []
     if os.path.isfile(config.LOG_FILE):
         with open(config.LOG_FILE) as f:
             rows = list(csv.reader(f))
-        for row in rows[-21:-1][::-1]:
-            pnl_str = row[5] if len(row) > 5 else ""
-            try:
-                pl_clase = "pos" if float(pnl_str) >= 0 else "neg"
-            except (ValueError, IndexError):
-                pl_clase = "neu"
-            trades.append({
-                "hora":     row[0][11:19] if row[0] else "",
-                "simbolo":  row[1] if len(row) > 1 else "",
-                "lado":     row[2] if len(row) > 2 else "",
-                "cantidad": row[3] if len(row) > 3 else "",
-                "precio":   row[4] if len(row) > 4 else "",
-                "pnl":      pnl_str,
-                "pl_clase": pl_clase,
-                "motivo":   row[6] if len(row) > 6 else "",
-            })
-
+            trades = rows[-21:-1][::-1]  # últimos 20, sin cabecera
     return render_template_string(
         DASHBOARD_HTML,
         modo=config.MODE,
@@ -364,6 +332,7 @@ def dashboard():
         objetivo_ok=r["objetivo_ok"],
         objetivo_diario=config.OBJETIVO_DIARIO,
         posiciones=posiciones,
+        trailing=r["trailing_activos"],
         trades=trades,
         clase_d="pos" if r["pnl_diario"] >= 0 else "neg",
         clase_t="pos" if r["pnl_total"]  >= 0 else "neg",
@@ -377,6 +346,7 @@ def api_status():
 
 @app.route("/health")
 def health():
+    # Usado por cron-job.org para mantener Render despierto
     return jsonify({"status": "ok", "mode": config.MODE}), 200
 
 
