@@ -200,6 +200,22 @@ def ciclo():
     logger.info(f"PnL dia: {r['pnl_diario']:+.2f} | Total: {r['pnl_total']:+.2f} USD")
 
 
+def limpiar_posiciones_al_arrancar():
+    """Cierra todas las posiciones abiertas al arrancar el bot.
+    Util para limpiar posiciones de sesiones anteriores con logica incorrecta.
+    """
+    try:
+        abiertas = trading_client.get_all_positions()
+        if not abiertas:
+            logger.info("Arranque limpio: sin posiciones abiertas.")
+            return
+        logger.info(f"Cerrando {len(abiertas)} posicion(es) abiertas al arrancar...")
+        trading_client.close_all_positions(cancel_orders=True)
+        logger.info("Posiciones cerradas. El bot empieza desde cero.")
+    except Exception as e:
+        logger.error(f"Error cerrando posiciones al arrancar: {e}")
+
+
 def bucle_principal():
     logger.info(f"Bot arrancado | Modo: {config.MODE.upper()}")
     while True:
@@ -382,6 +398,7 @@ def health():
 # ─── Arranque ─────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    limpiar_posiciones_al_arrancar()
     Thread(target=bucle_principal, daemon=True).start()
     logger.info(f"Dashboard en http://localhost:{config.DASHBOARD_PORT}")
     app.run(host="0.0.0.0", port=config.DASHBOARD_PORT, debug=False)
