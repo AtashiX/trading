@@ -126,8 +126,8 @@ def registrar_csv(simbolo, lado, cantidad, precio, pnl=None, motivo=""):
         ])
 
 
-def abrir_posicion(simbolo: str, precio: float, pv: float):
-    cantidad = risk.calcular_cantidad(precio, pv)
+def abrir_posicion(simbolo: str, precio: float):
+    cantidad = risk.calcular_cantidad(precio)
     if cantidad <= 0:
         return
     try:
@@ -164,7 +164,6 @@ def cerrar_posicion(simbolo: str, posicion, motivo: str):
 
 def ciclo():
     posiciones = posiciones_abiertas()
-    pv         = portfolio_value()
 
     for simbolo in config.SIMBOLOS:
         try:
@@ -192,13 +191,29 @@ def ciclo():
             ok, motivo = risk.puede_operar(len(posiciones))
             if not ok:
                 continue
-            abrir_posicion(simbolo, precio, pv)
+            abrir_posicion(simbolo, precio)
 
         except Exception as e:
             logger.error(f"Error {simbolo}: {e}")
 
     r = risk.resumen()
     logger.info(f"PnL dia: {r['pnl_diario']:+.2f} | Total: {r['pnl_total']:+.2f} USD")
+
+
+def limpiar_posiciones_al_arrancar():
+    """Cierra todas las posiciones abiertas al arrancar el bot.
+    Util para limpiar posiciones de sesiones anteriores con logica incorrecta.
+    """
+    try:
+        abiertas = trading_client.get_all_positions()
+        if not abiertas:
+            logger.info("Arranque limpio: sin posiciones abiertas.")
+            return
+        logger.info(f"Cerrando {len(abiertas)} posicion(es) abiertas al arrancar...")
+        trading_client.close_all_positions(cancel_orders=True)
+        logger.info("Posiciones cerradas. El bot empieza desde cero.")
+    except Exception as e:
+        logger.error(f"Error cerrando posiciones al arrancar: {e}")
 
 
 def bucle_principal():
@@ -383,6 +398,7 @@ def health():
 # ─── Arranque ─────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
+    limpiar_posiciones_al_arrancar()
     Thread(target=bucle_principal, daemon=True).start()
     logger.info(f"Dashboard en http://localhost:{config.DASHBOARD_PORT}")
     app.run(host="0.0.0.0", port=config.DASHBOARD_PORT, debug=False)
