@@ -39,9 +39,9 @@ MAX_PERDIDA_TOTAL  = 75.0    # USD: límite absoluto (nunca perder más del 75%)
 
 # ─── Gestión de posiciones ────────────────────────────────────────────────────
 STOP_LOSS_PCT    = 0.006    # −0.6% stop-loss fijo por operación
-TAKE_PROFIT_PCT  = 0.010    # +1.0% take-profit base
-MAX_POSICIONES   = 2         # Máximo de posiciones abiertas simultáneas
-MAX_GASTO_POR_TRADE = 0.40  # gastar max 40% del capital por orden (con 2 pos max = 80 USD usados)
+TAKE_PROFIT_PCT  = 0.008    # +0.8% take-profit base — se alcanza antes, mas rotacion
+MAX_POSICIONES   = 3         # Máximo de posiciones abiertas simultáneas
+MAX_GASTO_POR_TRADE = 0.30  # gastar max 30% del capital por orden (con 3 pos max = 90 USD usados)
 REINVERTIR_PCT   = 0.50     # 50% de beneficios extra sobre objetivo → reinvertir
 
 # ─── Trailing stop ────────────────────────────────────────────────────────────
