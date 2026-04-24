@@ -32,7 +32,7 @@ ALPACA_BASE_URL = {
 
 # ─── Capital y objetivos ──────────────────────────────────────────────────────
 CAPITAL_INICIAL    = 100.0   # USD de partida (referencia para cálculos)
-OBJETIVO_DIARIO    = 5.0     # USD: no abrir nuevas posiciones al alcanzarlo
+OBJETIVO_DIARIO    = 25.0     # USD: no abrir nuevas posiciones al alcanzarlo
 OBJETIVO_MENSUAL   = 100.0   # USD: referencia para calcular retiro mensual
 MAX_PERDIDA_DIARIA = 8.0     # USD: detener el bot si se supera en el día
 MAX_PERDIDA_TOTAL  = 75.0    # USD: límite absoluto (nunca perder más del 75%)
