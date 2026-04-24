@@ -56,7 +56,7 @@ MOMENTUM_MIN_PCT       = 0.005  # Precio debe haber subido > 0.5% desde entrada
 # El bot itera en orden: empieza por los primeros.
 SIMBOLOS = [
     # Núcleo (top calidad para scalping agresivo)
-    "SPY", "QQQ",
+    "SPY", "QQQ", "IWM",
     "NVDA", "AMD",
     "AAPL", "MSFT",
     "TSLA", "META", "AMZN", "GOOGL",
