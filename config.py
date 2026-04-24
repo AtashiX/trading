@@ -55,12 +55,15 @@ MOMENTUM_MIN_PCT       = 0.005  # Precio debe haber subido > 0.5% desde entrada
 # Tier 1 primero (más seguros). Tier 3 al final (más especulativos).
 # El bot itera en orden: empieza por los primeros.
 SIMBOLOS = [
-    # Tier 1 — empezar aquí en paper trading
-    "SPY", "QQQ", "TQQQ", "SQQQ", "IWM", "AAPL", "MSFT",
-    # Tier 2 — añadir tras 2 semanas de paper
-    "AMD", "NVDA", "PLTR", "BAC", "F", "SOFI", "SNAP",
-    # Tier 3 — más especulativos
-    "NIO", "RIVN", "MARA", "HOOD", "VALE", "CLSK",
+    # Núcleo (top calidad para scalping agresivo)
+    "SPY", "QQQ",
+    "NVDA", "AMD",
+    "AAPL", "MSFT",
+    "TSLA", "META", "AMZN", "GOOGL",
+    # Alta volatilidad “buena” (para más agresividad)
+    "NFLX", "COIN", "SMCI", "ARM", "MU", "INTC",
+    # Volatilidad media-alta (opcionales pero útiles)
+    "PLTR", "HOOD", "SOFI", "SNAP"
 ]
 
 # ─── Estrategia EMA + RSI + volumen ──────────────────────────────────────────
