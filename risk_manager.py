@@ -3,7 +3,9 @@ risk_manager.py — Protección de capital y trailing stop
 Ninguna orden llega a Alpaca sin pasar por aquí.
 """
 
+import json
 import logging
+import os
 from datetime import date
 from config import (
     MAX_PERDIDA_DIARIA, MAX_PERDIDA_TOTAL, OBJETIVO_DIARIO, OBJETIVO_MENSUAL,
@@ -13,6 +15,7 @@ from config import (
 )
 
 logger = logging.getLogger("risk")
+PNL_FILE = "pnl.json"
 
 
 class TrailingState:
@@ -66,6 +69,33 @@ class RiskManager:
         self.fecha_hoy   = date.today()
         self.objetivo_ok = False
         self.trailing: dict[str, TrailingState] = {}
+        self._cargar_pnl()
+
+    def _guardar_pnl(self):
+        try:
+            with open(PNL_FILE, 'w') as f:
+                json.dump({
+                    'pnl_total': self.pnl_total,
+                    'fecha': self.fecha_hoy.isoformat(),
+                    'pnl_diario': self.pnl_diario,
+                }, f)
+        except Exception as e:
+            logger.error(f'Error guardando PnL: {e}')
+
+    def _cargar_pnl(self):
+        if not os.path.isfile(PNL_FILE):
+            return
+        try:
+            with open(PNL_FILE) as f:
+                data = json.load(f)
+            self.pnl_total = data.get('pnl_total', 0.0)
+            # Solo recuperar pnl_diario si es del mismo dia
+            if data.get('fecha') == date.today().isoformat():
+                self.pnl_diario = data.get('pnl_diario', 0.0)
+            logger.info(f'PnL recuperado: total {self.pnl_total:+.2f} USD | '
+                        f'hoy {self.pnl_diario:+.2f} USD')
+        except Exception as e:
+            logger.error(f'Error cargando PnL: {e}')
 
     # ── Reseteo automático al cambiar de día ──────────────────────────────────
     def _check_dia(self):
@@ -86,6 +116,7 @@ class RiskManager:
         self.pnl_diario += ganancia_usd
         self.pnl_total  += ganancia_usd
         self.trailing.pop(simbolo, None)
+        self._guardar_pnl()
         tag = "GANANCIA" if ganancia_usd >= 0 else "PERDIDA"
         logger.info(f"[{tag}] {simbolo}: {ganancia_usd:+.2f} USD | "
                     f"Dia: {self.pnl_diario:+.2f} | Total: {self.pnl_total:+.2f}")
@@ -102,7 +133,7 @@ class RiskManager:
         return self.trailing[simbolo].actualizar(precio, vol, vol_media)
 
     # ── ¿Podemos abrir más posiciones? ───────────────────────────────────────
-    def puede_operar(self, n_posiciones: int) -> tuple[bool, str]:
+    def puede_operar(self) -> tuple[bool, str]:
         self._check_dia()
         if self.pnl_total <= -MAX_PERDIDA_TOTAL:
             return False, f"STOP GLOBAL: perdida total {self.pnl_total:.2f} USD"
@@ -110,8 +141,11 @@ class RiskManager:
             return False, f"STOP DIARIO: perdida hoy {self.pnl_diario:.2f} USD"
         if self.objetivo_ok:
             return False, "Objetivo diario alcanzado."
-        if n_posiciones >= MAX_POSICIONES:
-            return False, f"Maximo de posiciones ({MAX_POSICIONES}) alcanzado."
+        # Usar el conteo interno en vez del de Alpaca — evita abrir de mas
+        # en el mismo ciclo antes de que Alpaca actualice las posiciones
+        n_abiertas = len(self.trailing)
+        if n_abiertas >= MAX_POSICIONES:
+            return False, f"Maximo de posiciones ({MAX_POSICIONES}) alcanzado ({n_abiertas} abiertas)."
         return True, "OK"
 
     # ── Tamaño de posición ────────────────────────────────────────────────────

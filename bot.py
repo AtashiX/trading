@@ -188,7 +188,7 @@ def ciclo():
             # Nueva entrada
             if not señal_entrada(df):
                 continue
-            ok, motivo = risk.puede_operar(len(posiciones))
+            ok, motivo = risk.puede_operar()
             if not ok:
                 continue
             abrir_posicion(simbolo, precio)
