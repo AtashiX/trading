@@ -115,7 +115,10 @@ def obtener_barras(simbolo: str) -> pd.DataFrame:
     df = data_client.get_stock_bars(req).df
     if isinstance(df.index, pd.MultiIndex):
         df = df.loc[simbolo]
-    return df.reset_index()
+    df = df.reset_index()
+    if df.empty or "close" not in df.columns:
+        raise ValueError(f"Sin datos de mercado para {simbolo} (¿mercado cerrado?)")
+    return df
 
 
 def calcular_indicadores(df: pd.DataFrame) -> pd.DataFrame:
@@ -216,11 +219,6 @@ def cerrar_posicion(simbolo: str, posicion, motivo: str):
 # ─── Ciclo principal ──────────────────────────────────────────────────────────
 
 def ciclo():
-    # FIX 3 — No hacer nada fuera del horario de mercado
-    if not mercado_abierto():
-        logger.info("Mercado cerrado. Ciclo omitido.")
-        return
-
     posiciones = posiciones_abiertas()
 
     for simbolo in config.SIMBOLOS:
@@ -305,7 +303,10 @@ def bucle_principal():
     logger.info(f"Bot arrancado | Modo: {config.MODE.upper()}")
     while True:
         try:
-            ciclo()
+            if mercado_abierto():
+                ciclo()
+            else:
+                logger.info("Mercado cerrado. Esperando...")
         except Exception as e:
             logger.error(f"Error en ciclo: {e}")
         time.sleep(config.SLEEP_SEGUNDOS)
