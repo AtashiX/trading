@@ -4,3 +4,4 @@ pandas
 numpy
 flask
 python-dotenv
+gunicorn
