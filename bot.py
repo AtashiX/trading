@@ -1,6 +1,6 @@
 """
 bot.py — Bot de scalping 1 minuto + dashboard web
-Estrategia: EMA(5/13) + RSI(7) + confirmación de volumen
+Estrategia: EMA(5/8) + RSI(7) + confirmación de volumen
 
 Arranque local:
     python bot.py
@@ -8,14 +8,23 @@ Arranque local:
 
 En Render:
     Start command: python bot.py
+
+FIXES APLICADOS:
+    1. limpiar_posiciones_al_arrancar sincroniza RiskManager
+    2. Evaluación de posiciones usa precio de quote en tiempo real
+    3. Protección de horario de mercado (09:30–16:00 ET)
+    4. Threading lock en risk.resumen() / trailing dict
+    5. calcular_cantidad usa floor a 2 decimales (compatible con Alpaca)
 """
 
+import math
 import time
 import logging
 import csv
 import os
-from datetime import datetime, timezone
-from threading import Thread
+from datetime import datetime, timezone, time as dtime
+from threading import Thread, Lock
+import zoneinfo
 
 import numpy as np
 import pandas as pd
@@ -25,7 +34,8 @@ from alpaca.trading.client import TradingClient
 from alpaca.trading.requests import MarketOrderRequest
 from alpaca.trading.enums import OrderSide, TimeInForce
 from alpaca.data.historical import StockHistoricalDataClient
-from alpaca.data.requests import StockBarsRequest
+from alpaca.data.live import StockDataStream
+from alpaca.data.requests import StockBarsRequest, StockLatestQuoteRequest
 from alpaca.data.timeframe import TimeFrame, TimeFrameUnit
 
 import config
@@ -54,6 +64,45 @@ data_client = StockHistoricalDataClient(
 )
 risk = RiskManager()
 
+# FIX 4 — Lock para proteger accesos concurrentes al RiskManager desde
+# el hilo del bot y el hilo de Flask.
+risk_lock = Lock()
+
+# ─── Zona horaria del mercado ─────────────────────────────────────────────────
+ET = zoneinfo.ZoneInfo("America/New_York")
+MARKET_OPEN  = dtime(9, 30)
+MARKET_CLOSE = dtime(16, 0)
+
+
+# ─── FIX 3 — Protección de horario de mercado ─────────────────────────────────
+def mercado_abierto() -> bool:
+    """Devuelve True solo si estamos dentro del horario regular de NYSE."""
+    ahora = datetime.now(ET)
+    # Fin de semana
+    if ahora.weekday() >= 5:
+        return False
+    hora_et = ahora.time().replace(second=0, microsecond=0)
+    return MARKET_OPEN <= hora_et < MARKET_CLOSE
+
+
+# ─── FIX 2 — Precio de mercado en tiempo real via quote ──────────────────────
+def obtener_precio_real(simbolo: str) -> float | None:
+    """
+    Obtiene el mid-price del último quote (bid+ask)/2.
+    Más preciso que el close de la última vela para evaluar SL/TP.
+    Retorna None si falla.
+    """
+    try:
+        req = StockLatestQuoteRequest(symbol_or_symbols=simbolo)
+        quote = data_client.get_stock_latest_quote(req)[simbolo]
+        bid = float(quote.bid_price)
+        ask = float(quote.ask_price)
+        if bid > 0 and ask > 0:
+            return (bid + ask) / 2
+    except Exception as e:
+        logger.debug(f"Quote fallback {simbolo}: {e}")
+    return None
+
 
 # ─── Datos e indicadores ──────────────────────────────────────────────────────
 
@@ -71,13 +120,13 @@ def obtener_barras(simbolo: str) -> pd.DataFrame:
 
 def calcular_indicadores(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
-    df["ema_r"]    = df["close"].ewm(span=config.EMA_RAPIDA, adjust=False).mean()
-    df["ema_l"]    = df["close"].ewm(span=config.EMA_LENTA,  adjust=False).mean()
-    delta          = df["close"].diff()
-    gan            = delta.clip(lower=0).ewm(span=config.RSI_PERIODO, adjust=False).mean()
-    perd           = (-delta.clip(upper=0)).ewm(span=config.RSI_PERIODO, adjust=False).mean()
-    df["rsi"]      = 100 - (100 / (1 + gan / perd.replace(0, np.nan)))
-    df["vol_media"]= df["volume"].rolling(config.VOL_MEDIA_N).mean()
+    df["ema_r"]     = df["close"].ewm(span=config.EMA_RAPIDA, adjust=False).mean()
+    df["ema_l"]     = df["close"].ewm(span=config.EMA_LENTA,  adjust=False).mean()
+    delta           = df["close"].diff()
+    gan             = delta.clip(lower=0).ewm(span=config.RSI_PERIODO, adjust=False).mean()
+    perd            = (-delta.clip(upper=0)).ewm(span=config.RSI_PERIODO, adjust=False).mean()
+    df["rsi"]       = 100 - (100 / (1 + gan / perd.replace(0, np.nan)))
+    df["vol_media"] = df["volume"].rolling(config.VOL_MEDIA_N).mean()
     return df
 
 
@@ -86,6 +135,7 @@ def señal_entrada(df: pd.DataFrame) -> bool:
         return False
     ult, prev = df.iloc[-1], df.iloc[-2]
     cruce  = (prev["ema_r"] <= prev["ema_l"]) and (ult["ema_r"] > ult["ema_l"])
+    # RSI_SOBRECOMPRA actúa como umbral de NO-entrada (RSI debe estar por debajo)
     rsi_ok = ult["rsi"] < config.RSI_SOBRECOMPRA
     vol_ok = ult["volume"] > ult["vol_media"]
     if config.EXIGIR_VOLUMEN:
@@ -127,6 +177,7 @@ def registrar_csv(simbolo, lado, cantidad, precio, pnl=None, motivo=""):
 
 
 def abrir_posicion(simbolo: str, precio: float):
+    # FIX 5 aplicado en RiskManager.calcular_cantidad (ver risk_manager.py)
     cantidad = risk.calcular_cantidad(precio)
     if cantidad <= 0:
         return
@@ -137,7 +188,8 @@ def abrir_posicion(simbolo: str, precio: float):
             side=OrderSide.BUY,
             time_in_force=TimeInForce.DAY,
         ))
-        risk.registrar_apertura(simbolo, precio)
+        with risk_lock:  # FIX 4
+            risk.registrar_apertura(simbolo, precio)
         logger.info(f"COMPRA {simbolo}: {cantidad} acc @ ~{precio:.4f} "
                     f"| SL {precio*(1-config.STOP_LOSS_PCT):.4f} "
                     f"| TP {precio*(1+config.TAKE_PROFIT_PCT):.4f}")
@@ -153,7 +205,8 @@ def cerrar_posicion(simbolo: str, posicion, motivo: str):
         actual  = float(posicion.current_price)
         pnl     = (actual - entrada) * qty
         trading_client.close_position(simbolo)
-        risk.registrar_cierre(simbolo, pnl)
+        with risk_lock:  # FIX 4
+            risk.registrar_cierre(simbolo, pnl)
         registrar_csv(simbolo, "sell", qty, actual, pnl, motivo)
         logger.info(f"CIERRE {simbolo} [{motivo}]: {pnl:+.4f} USD")
     except Exception as e:
@@ -163,20 +216,28 @@ def cerrar_posicion(simbolo: str, posicion, motivo: str):
 # ─── Ciclo principal ──────────────────────────────────────────────────────────
 
 def ciclo():
+    # FIX 3 — No hacer nada fuera del horario de mercado
+    if not mercado_abierto():
+        logger.info("Mercado cerrado. Ciclo omitido.")
+        return
+
     posiciones = posiciones_abiertas()
 
     for simbolo in config.SIMBOLOS:
         try:
-            df    = obtener_barras(simbolo)
-            df    = calcular_indicadores(df)
-            ult   = df.iloc[-1]
-            precio     = float(ult["close"])
+            df         = obtener_barras(simbolo)
+            df         = calcular_indicadores(df)
+            ult        = df.iloc[-1]
             vol_actual = float(ult["volume"])
             vol_media  = float(ult["vol_media"]) if not np.isnan(ult["vol_media"]) else vol_actual
 
+            # FIX 2 — Usar precio real de quote para evaluar SL/TP/trailing
+            precio = obtener_precio_real(simbolo) or float(ult["close"])
+
             # Gestión de posición existente
             if simbolo in posiciones:
-                accion = risk.evaluar_posicion(simbolo, precio, vol_actual, vol_media)
+                with risk_lock:  # FIX 4
+                    accion = risk.evaluar_posicion(simbolo, precio, vol_actual, vol_media)
                 if accion == "salir_take":
                     cerrar_posicion(simbolo, posiciones[simbolo], "take-profit")
                 elif accion == "salir_stop":
@@ -188,21 +249,28 @@ def ciclo():
             # Nueva entrada
             if not señal_entrada(df):
                 continue
-            ok, motivo = risk.puede_operar()
+
+            with risk_lock:  # FIX 4
+                ok, motivo_bloqueo = risk.puede_operar()
             if not ok:
+                logger.debug(f"No operar: {motivo_bloqueo}")
                 continue
             abrir_posicion(simbolo, precio)
 
         except Exception as e:
             logger.error(f"Error {simbolo}: {e}")
 
-    r = risk.resumen()
+    with risk_lock:
+        r = risk.resumen()
     logger.info(f"PnL dia: {r['pnl_diario']:+.2f} | Total: {r['pnl_total']:+.2f} USD")
 
 
+# ─── FIX 1 — Arranque limpio con sincronización de RiskManager ────────────────
+
 def limpiar_posiciones_al_arrancar():
-    """Cierra todas las posiciones abiertas al arrancar el bot.
-    Util para limpiar posiciones de sesiones anteriores con logica incorrecta.
+    """
+    Cierra todas las posiciones abiertas al arrancar el bot Y registra
+    cada cierre en el RiskManager para mantener el PnL consistente.
     """
     try:
         abiertas = trading_client.get_all_positions()
@@ -210,8 +278,25 @@ def limpiar_posiciones_al_arrancar():
             logger.info("Arranque limpio: sin posiciones abiertas.")
             return
         logger.info(f"Cerrando {len(abiertas)} posicion(es) abiertas al arrancar...")
+        for p in abiertas:
+            simbolo = p.symbol
+            try:
+                qty     = abs(float(p.qty))
+                entrada = float(p.avg_entry_price)
+                actual  = float(p.current_price)
+                pnl     = (actual - entrada) * qty
+                # FIX 1 — Registrar en RiskManager antes de enviar la orden
+                # (registrar_apertura necesita existir para que registrar_cierre funcione)
+                if simbolo not in risk.trailing:
+                    risk.registrar_apertura(simbolo, entrada)
+                risk.registrar_cierre(simbolo, pnl)
+                registrar_csv(simbolo, "sell", qty, actual, pnl, "arranque-limpieza")
+                logger.info(f"  Cerrada posicion previa {simbolo}: {pnl:+.4f} USD")
+            except Exception as e:
+                logger.error(f"  Error procesando {simbolo} al arrancar: {e}")
+        # Cierre masivo en Alpaca tras registrar todo
         trading_client.close_all_positions(cancel_orders=True)
-        logger.info("Posiciones cerradas. El bot empieza desde cero.")
+        logger.info("Posiciones cerradas y PnL sincronizado. Bot listo.")
     except Exception as e:
         logger.error(f"Error cerrando posiciones al arrancar: {e}")
 
@@ -224,7 +309,6 @@ def bucle_principal():
         except Exception as e:
             logger.error(f"Error en ciclo: {e}")
         time.sleep(config.SLEEP_SEGUNDOS)
-
 
 
 # ─── Dashboard Flask ──────────────────────────────────────────────────────────
@@ -251,6 +335,7 @@ td{padding:8px 10px;border-top:1px solid #1a1d2e}
 h2{font-size:11px;color:#555;text-transform:uppercase;letter-spacing:.5px;margin:14px 0 7px}
 .badge{padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700}
 .paper{background:#1e2236;color:#7c6af5}.live{background:#1a2e1a;color:#4caf50}
+.mercado-off{background:#2e1a1a;color:#f44336}
 code{font-family:monospace;font-size:11px;color:#aaa}
 </style>
 </head>
@@ -258,7 +343,9 @@ code{font-family:monospace;font-size:11px;color:#aaa}
 <h1>Scalping Bot</h1>
 <p class="sub">
   Modo: <span class="badge {{ modo }}">{{ modo.upper() }}</span>
-  &nbsp;·&nbsp; {{ ahora }} &nbsp;·&nbsp; refresh 15s
+  &nbsp;·&nbsp; {{ ahora }}
+  &nbsp;·&nbsp; Mercado: <span class="badge {{ 'paper' if mercado_ok else 'mercado-off' }}">{{ 'ABIERTO' if mercado_ok else 'CERRADO' }}</span>
+  &nbsp;·&nbsp; refresh 15s
 </p>
 <div class="cards">
   <div class="card">
@@ -326,9 +413,9 @@ app = Flask(__name__)
 
 @app.route("/")
 def dashboard():
-    r = risk.resumen()
+    with risk_lock:  # FIX 4
+        r = risk.resumen()
 
-    # Preprocesar posiciones en dicts simples (sin llamar float() en Jinja)
     posiciones = []
     try:
         for p in trading_client.get_all_positions():
@@ -345,7 +432,6 @@ def dashboard():
     except Exception:
         pass
 
-    # Preprocesar trades en dicts simples
     trades = []
     if os.path.isfile(config.LOG_FILE):
         with open(config.LOG_FILE) as f:
@@ -371,6 +457,7 @@ def dashboard():
         DASHBOARD_HTML,
         modo=config.MODE,
         ahora=datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+        mercado_ok=mercado_abierto(),
         pnl_diario=f"{r['pnl_diario']:+.2f}",
         pnl_total=f"{r['pnl_total']:+.2f}",
         retiro=r["retiro"]["retiro"],
@@ -387,12 +474,17 @@ def dashboard():
 
 @app.route("/api/status")
 def api_status():
-    return jsonify(risk.resumen())
+    with risk_lock:  # FIX 4
+        return jsonify(risk.resumen())
 
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "ok", "mode": config.MODE}), 200
+    return jsonify({
+        "status":       "ok",
+        "mode":         config.MODE,
+        "mercado":      mercado_abierto(),
+    }), 200
 
 
 # ─── Arranque ─────────────────────────────────────────────────────────────────

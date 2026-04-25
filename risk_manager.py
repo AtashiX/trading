@@ -1,10 +1,15 @@
 """
 risk_manager.py — Protección de capital y trailing stop
 Ninguna orden llega a Alpaca sin pasar por aquí.
+
+FIXES APLICADOS:
+    5. calcular_cantidad usa math.floor a 2 decimales en vez de round(4)
+       → compatible con todos los símbolos de Alpaca (fraccionales y enteros)
 """
 
 import json
 import logging
+import math
 import os
 from datetime import date
 from config import (
@@ -75,8 +80,8 @@ class RiskManager:
         try:
             with open(PNL_FILE, 'w') as f:
                 json.dump({
-                    'pnl_total': self.pnl_total,
-                    'fecha': self.fecha_hoy.isoformat(),
+                    'pnl_total':  self.pnl_total,
+                    'fecha':      self.fecha_hoy.isoformat(),
                     'pnl_diario': self.pnl_diario,
                 }, f)
         except Exception as e:
@@ -141,21 +146,25 @@ class RiskManager:
             return False, f"STOP DIARIO: perdida hoy {self.pnl_diario:.2f} USD"
         if self.objetivo_ok:
             return False, "Objetivo diario alcanzado."
-        # Usar el conteo interno en vez del de Alpaca — evita abrir de mas
-        # en el mismo ciclo antes de que Alpaca actualice las posiciones
         n_abiertas = len(self.trailing)
         if n_abiertas >= MAX_POSICIONES:
             return False, f"Maximo de posiciones ({MAX_POSICIONES}) alcanzado ({n_abiertas} abiertas)."
         return True, "OK"
 
-    # ── Tamaño de posición ────────────────────────────────────────────────────
+    # ── FIX 5 — Tamaño de posición con floor a 2 decimales ───────────────────
     def calcular_cantidad(self, precio: float) -> float:
-        # Gastar como mucho MAX_GASTO_POR_TRADE del capital inicial por orden.
-        # Nunca usar el portfolio de Alpaca (paper = 400.000 USD ficticios).
+        """
+        Usa math.floor a 2 decimales para garantizar compatibilidad con
+        todos los símbolos de Alpaca. round(4) podía generar cantidades
+        como 0.1234 que ciertos tickers no admiten en órdenes fraccionarias.
+        El floor también evita gastar más de MAX_GASTO_POR_TRADE por redondeo.
+        """
         if precio <= 0:
             return 0.0
         gasto_max = CAPITAL_INICIAL * MAX_GASTO_POR_TRADE
-        return round(gasto_max / precio, 4)
+        raw = gasto_max / precio
+        # Floor a 2 decimales: nunca se pasa de presupuesto, compatible con Alpaca
+        return math.floor(raw * 100) / 100
 
     # ── Calcular retiro mensual ───────────────────────────────────────────────
     def calcular_retiro(self) -> dict:
