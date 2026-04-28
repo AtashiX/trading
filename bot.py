@@ -301,12 +301,17 @@ def limpiar_posiciones_al_arrancar():
 
 def bucle_principal():
     logger.info(f"Bot arrancado | Modo: {config.MODE.upper()}")
+    _ciclos_cerrado = 0
     while True:
         try:
             if mercado_abierto():
+                _ciclos_cerrado = 0
                 ciclo()
             else:
-                logger.info("Mercado cerrado. Esperando...")
+                # Log solo cada 120 ciclos (~1h) para no saturar los logs
+                if _ciclos_cerrado % 120 == 0:
+                    logger.info("Mercado cerrado. Esperando apertura...")
+                _ciclos_cerrado += 1
         except Exception as e:
             logger.error(f"Error en ciclo: {e}")
         time.sleep(config.SLEEP_SEGUNDOS)
@@ -488,10 +493,26 @@ def health():
     }), 200
 
 
-# ─── Arranque ─────────────────────────────────────────────────────────────────
+# ─── Arranque del hilo del bot ───────────────────────────────────────────────
+# Compatible con python bot.py (desarrollo) Y gunicorn --preload (producción).
+# El flag _bot_iniciado evita arrancar el hilo dos veces si Gunicorn
+# hace múltiples imports del módulo.
+
+_bot_iniciado = False
+
+def iniciar_bot():
+    global _bot_iniciado
+    if _bot_iniciado:
+        return
+    _bot_iniciado = True
+    limpiar_posiciones_al_arrancar()
+    t = Thread(target=bucle_principal, daemon=False)  # daemon=False: sobrevive al main
+    t.start()
+    logger.info("Hilo del bot arrancado.")
+
+# Gunicorn importa este módulo en el worker → iniciar_bot() se llama aquí
+iniciar_bot()
 
 if __name__ == "__main__":
-    limpiar_posiciones_al_arrancar()
-    Thread(target=bucle_principal, daemon=True).start()
     logger.info(f"Dashboard en http://localhost:{config.DASHBOARD_PORT}")
     app.run(host="0.0.0.0", port=config.DASHBOARD_PORT, debug=False)
