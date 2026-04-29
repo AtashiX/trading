@@ -73,6 +73,7 @@ RSI_PERIODO     = 7     # RSI corto para scalping
 RSI_SOBRECOMPRA = 65    # Subido de 60: ventana de entrada mas amplia
 VOL_MEDIA_N     = 20    # Velas para calcular volumen medio
 EXIGIR_VOLUMEN  = False # False: no exigir confirmacion de volumen para entrar
+CRUCE_VENTANA   = 3     # Buscar cruce alcista en las últimas N velas (evita perder cruces entre ciclos)
 
 INTERVALO_BARS = "1Min"
 N_BARRAS       = 60     # Últimas 60 velas de 1 minuto

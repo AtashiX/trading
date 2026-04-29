@@ -118,7 +118,14 @@ def obtener_barras(simbolo: str) -> pd.DataFrame:
     df = df.reset_index()
     if df.empty or "close" not in df.columns:
         raise ValueError(f"Sin datos de mercado para {simbolo} (¿mercado cerrado?)")
-    return df
+    # Filtrar solo velas de hoy en ET para evitar datos del día anterior
+    col_ts = "timestamp" if "timestamp" in df.columns else df.columns[0]
+    df[col_ts] = pd.to_datetime(df[col_ts], utc=True)
+    hoy_et = datetime.now(ET).date()
+    df = df[df[col_ts].dt.tz_convert(ET).dt.date == hoy_et]
+    if df.empty:
+        raise ValueError(f"Sin velas de hoy para {simbolo}")
+    return df.reset_index(drop=True)
 
 
 def calcular_indicadores(df: pd.DataFrame) -> pd.DataFrame:
@@ -133,17 +140,38 @@ def calcular_indicadores(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def señal_entrada(df: pd.DataFrame) -> bool:
+def señal_entrada(df: pd.DataFrame, simbolo: str = "") -> tuple[bool, str]:
+    """
+    Retorna (señal: bool, motivo: str) para facilitar el diagnóstico en logs.
+    Ventana de cruce ampliada a CRUCE_VENTANA velas para no perder cruces
+    que ocurrieron 1-2 velas antes del ciclo actual.
+    """
     if len(df) < config.EMA_LENTA + 2:
-        return False
-    ult, prev = df.iloc[-1], df.iloc[-2]
-    cruce  = (prev["ema_r"] <= prev["ema_l"]) and (ult["ema_r"] > ult["ema_l"])
-    # RSI_SOBRECOMPRA actúa como umbral de NO-entrada (RSI debe estar por debajo)
+        return False, f"pocas_velas({len(df)})"
+
+    ult = df.iloc[-1]
     rsi_ok = ult["rsi"] < config.RSI_SOBRECOMPRA
+    if not rsi_ok:
+        return False, f"rsi_alto({ult['rsi']:.1f}>={config.RSI_SOBRECOMPRA})"
+
     vol_ok = ult["volume"] > ult["vol_media"]
-    if config.EXIGIR_VOLUMEN:
-        return cruce and rsi_ok and vol_ok
-    return cruce and rsi_ok
+    if config.EXIGIR_VOLUMEN and not vol_ok:
+        return False, f"vol_bajo({ult['volume']:.0f}<{ult['vol_media']:.0f})"
+
+    # Buscar cruce alcista en las últimas CRUCE_VENTANA velas
+    ventana = min(config.CRUCE_VENTANA, len(df) - 1)
+    cruce = False
+    for i in range(1, ventana + 1):
+        cur  = df.iloc[-i]
+        prev = df.iloc[-i - 1]
+        if (prev["ema_r"] <= prev["ema_l"]) and (cur["ema_r"] > cur["ema_l"]):
+            cruce = True
+            break
+
+    if not cruce:
+        return False, f"sin_cruce(ema_r={ult['ema_r']:.4f} ema_l={ult['ema_l']:.4f})"
+
+    return True, "OK"
 
 
 # ─── Utilidades de trading ────────────────────────────────────────────────────
@@ -245,13 +273,16 @@ def ciclo():
                 continue
 
             # Nueva entrada
-            if not señal_entrada(df):
+            hay_señal, motivo_señal = señal_entrada(df, simbolo)
+            logger.debug(f"{simbolo}: señal={hay_señal} | {motivo_señal} "
+                         f"| precio={precio:.4f}")
+            if not hay_señal:
                 continue
 
             with risk_lock:  # FIX 4
                 ok, motivo_bloqueo = risk.puede_operar()
             if not ok:
-                logger.debug(f"No operar: {motivo_bloqueo}")
+                logger.info(f"Señal {simbolo} bloqueada: {motivo_bloqueo}")
                 continue
             abrir_posicion(simbolo, precio)
 
