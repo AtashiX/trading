@@ -46,3 +46,6 @@ Thumbs.db
 # Propios
 hosting.txt
 Historial/
+cache/
+backtest.py
+CONTEXT.md

@@ -1,0 +1,164 @@
+======================================================================
+RESULTADOS BACKTEST - PEGAR ESTE BLOQUE A CLAUDE
+Generado: 2026-05-11 07:08
+Simbolos: 480 | Historico: 1 anyo(s)
+Configs probadas: 8300 | Tiempo analisis: 827 min
+Ranking por rendimiento sin PDT. Datos con PDT para comparar.
+======================================================================
+
+CONFIGURACION #1  [grueso+fino]
+  SIN PDT:     win  68.1% | PnL +2254.82 USD | 302,396 trades | PF 1.07
+  CON PDT:     win  68.2% | PnL  +508.52 USD | 86,070 trades | PF 1.08  (-72% trades)
+  Impacto PDT: ALTO
+  EMA 2/7  RSI periodo 5 umbral <55  SL 1.1%  TP 0.5%
+  EMA50: No  Ventana cruce: 3 velas  Precio minimo: 10 USD
+  Simbolos rentables: 343 sin PDT / 306 con PDT
+  Top simbolos: STX(71.0%), WDC(69.7%), TER(70.2%), KLAC(71.8%), MU(67.7%), LRCX(69.1%), JBL(71.8%), MPWR(70.3%), AMD(67.7%), PWR(71.5%)
+    STX      | sin PDT: win  71.0% PnL  +46.82 USD 1217 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    WDC      | sin PDT: win  69.7% PnL  +46.57 USD 1348 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    TER      | sin PDT: win  70.2% PnL  +43.17 USD 1124 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    KLAC     | sin PDT: win  71.8% PnL  +36.50 USD  908 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    MU       | sin PDT: win  67.7% PnL  +35.73 USD 1235 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+----------------------------------------------------------------------
+
+CONFIGURACION #2  [grueso+fino]
+  SIN PDT:     win  68.1% | PnL +2247.81 USD | 295,315 trades | PF 1.07
+  CON PDT:     win  68.2% | PnL  +482.89 USD | 86,407 trades | PF 1.08  (-71% trades)
+  Impacto PDT: ALTO
+  EMA 2/8  RSI periodo 5 umbral <55  SL 1.1%  TP 0.5%
+  EMA50: No  Ventana cruce: 3 velas  Precio minimo: 10 USD
+  Simbolos rentables: 347 sin PDT / 307 con PDT
+  Top simbolos: WDC(70.5%), TER(70.4%), STX(71.1%), KLAC(71.8%), MU(67.1%), AMD(67.8%), PWR(71.8%), JBL(71.8%), LRCX(69.0%), GLW(69.8%)
+    WDC      | sin PDT: win  70.5% PnL  +48.48 USD 1297 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    TER      | sin PDT: win  70.4% PnL  +44.46 USD 1086 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    STX      | sin PDT: win  71.1% PnL  +43.64 USD 1156 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    KLAC     | sin PDT: win  71.8% PnL  +37.23 USD  876 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    MU       | sin PDT: win  67.1% PnL  +32.03 USD 1190 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+----------------------------------------------------------------------
+
+CONFIGURACION #3  [grueso+fino]
+  SIN PDT:     win  68.1% | PnL +2233.35 USD | 293,926 trades | PF 1.07
+  CON PDT:     win  68.2% | PnL  +509.79 USD | 83,890 trades | PF 1.08  (-72% trades)
+  Impacto PDT: ALTO
+  EMA 2/7  RSI periodo 5 umbral <55  SL 1.1%  TP 0.5%
+  EMA50: No  Ventana cruce: 3 velas  Precio minimo: 20 USD
+  Simbolos rentables: 335 sin PDT / 299 con PDT
+  Top simbolos: STX(71.0%), WDC(69.7%), TER(70.2%), KLAC(71.8%), MU(67.7%), LRCX(69.1%), JBL(71.8%), MPWR(70.3%), AMD(67.7%), PWR(71.5%)
+    STX      | sin PDT: win  71.0% PnL  +46.82 USD 1217 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    WDC      | sin PDT: win  69.7% PnL  +46.57 USD 1348 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    TER      | sin PDT: win  70.2% PnL  +43.17 USD 1124 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    KLAC     | sin PDT: win  71.8% PnL  +36.50 USD  908 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    MU       | sin PDT: win  67.7% PnL  +35.73 USD 1235 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+----------------------------------------------------------------------
+
+CONFIGURACION #4  [grueso+fino]
+  SIN PDT:     win  68.1% | PnL +2223.85 USD | 286,983 trades | PF 1.07
+  CON PDT:     win  68.2% | PnL  +485.15 USD | 84,249 trades | PF 1.08  (-71% trades)
+  Impacto PDT: ALTO
+  EMA 2/8  RSI periodo 5 umbral <55  SL 1.1%  TP 0.5%
+  EMA50: No  Ventana cruce: 3 velas  Precio minimo: 20 USD
+  Simbolos rentables: 339 sin PDT / 302 con PDT
+  Top simbolos: WDC(70.5%), TER(70.4%), STX(71.1%), KLAC(71.8%), MU(67.1%), AMD(67.8%), PWR(71.8%), JBL(71.8%), LRCX(69.0%), GLW(69.8%)
+    WDC      | sin PDT: win  70.5% PnL  +48.48 USD 1297 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    TER      | sin PDT: win  70.4% PnL  +44.46 USD 1086 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    STX      | sin PDT: win  71.1% PnL  +43.64 USD 1156 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    KLAC     | sin PDT: win  71.8% PnL  +37.23 USD  876 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    MU       | sin PDT: win  67.1% PnL  +32.03 USD 1190 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+----------------------------------------------------------------------
+
+CONFIGURACION #5  [grueso+fino]
+  SIN PDT:     win  68.1% | PnL +2219.63 USD | 306,773 trades | PF 1.07
+  CON PDT:     win  68.2% | PnL  +500.47 USD | 85,895 trades | PF 1.08  (-72% trades)
+  Impacto PDT: ALTO
+  EMA 2/7  RSI periodo 7 umbral <55  SL 1.1%  TP 0.5%
+  EMA50: No  Ventana cruce: 3 velas  Precio minimo: 10 USD
+  Simbolos rentables: 332 sin PDT / 297 con PDT
+  Top simbolos: WDC(69.8%), STX(70.7%), TER(70.1%), MU(68.1%), KLAC(71.2%), LRCX(69.0%), AMD(67.8%), JBL(71.8%), PWR(71.0%), WBD(69.0%)
+    WDC      | sin PDT: win  69.8% PnL  +47.74 USD 1379 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    STX      | sin PDT: win  70.7% PnL  +42.19 USD 1244 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    TER      | sin PDT: win  70.1% PnL  +41.36 USD 1148 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    MU       | sin PDT: win  68.1% PnL  +38.66 USD 1264 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    KLAC     | sin PDT: win  71.2% PnL  +33.93 USD  919 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+----------------------------------------------------------------------
+
+CONFIGURACION #6  [grueso+fino]
+  SIN PDT:     win  68.1% | PnL +2199.82 USD | 298,654 trades | PF 1.07
+  CON PDT:     win  68.1% | PnL  +397.97 USD | 86,179 trades | PF 1.07  (-71% trades)
+  Impacto PDT: ALTO
+  EMA 2/8  RSI periodo 7 umbral <55  SL 1.1%  TP 0.5%
+  EMA50: No  Ventana cruce: 3 velas  Precio minimo: 10 USD
+  Simbolos rentables: 339 sin PDT / 295 con PDT
+  Top simbolos: TER(70.6%), WDC(70.1%), STX(71.3%), MU(67.5%), KLAC(71.5%), LRCX(69.4%), AMD(68.1%), PWR(71.6%), JBL(71.7%), APA(69.9%)
+    TER      | sin PDT: win  70.6% PnL  +46.03 USD 1110 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    WDC      | sin PDT: win  70.1% PnL  +45.04 USD 1305 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    STX      | sin PDT: win  71.3% PnL  +43.75 USD 1187 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    MU       | sin PDT: win  67.5% PnL  +33.75 USD 1218 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    KLAC     | sin PDT: win  71.5% PnL  +33.49 USD  883 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+----------------------------------------------------------------------
+
+CONFIGURACION #7  [grueso+fino]
+  SIN PDT:     win  68.1% | PnL +2199.40 USD | 298,196 trades | PF 1.07
+  CON PDT:     win  68.2% | PnL  +496.97 USD | 83,728 trades | PF 1.08  (-72% trades)
+  Impacto PDT: ALTO
+  EMA 2/7  RSI periodo 7 umbral <55  SL 1.1%  TP 0.5%
+  EMA50: No  Ventana cruce: 3 velas  Precio minimo: 20 USD
+  Simbolos rentables: 324 sin PDT / 290 con PDT
+  Top simbolos: WDC(69.8%), STX(70.7%), TER(70.1%), MU(68.1%), KLAC(71.2%), LRCX(69.0%), AMD(67.8%), JBL(71.8%), PWR(71.0%), WBD(69.0%)
+    WDC      | sin PDT: win  69.8% PnL  +47.74 USD 1379 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    STX      | sin PDT: win  70.7% PnL  +42.19 USD 1244 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    TER      | sin PDT: win  70.1% PnL  +41.36 USD 1148 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    MU       | sin PDT: win  68.1% PnL  +38.66 USD 1264 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    KLAC     | sin PDT: win  71.2% PnL  +33.93 USD  919 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+----------------------------------------------------------------------
+
+CONFIGURACION #8  [grueso+fino]
+  SIN PDT:     win  68.1% | PnL +2199.35 USD | 298,829 trades | PF 1.07
+  CON PDT:     win  68.1% | PnL  +381.88 USD | 83,722 trades | PF 1.07  (-72% trades)
+  Impacto PDT: ALTO
+  EMA 2/8  RSI periodo 9 umbral <55  SL 1.1%  TP 0.5%
+  EMA50: No  Ventana cruce: 3 velas  Precio minimo: 20 USD
+  Simbolos rentables: 327 sin PDT / 289 con PDT
+  Top simbolos: WDC(70.2%), STX(70.8%), TER(70.2%), AMD(68.1%), LRCX(69.7%), PWR(71.8%), APA(70.1%), KLAC(70.4%), INTC(68.1%), MU(67.3%)
+    WDC      | sin PDT: win  70.2% PnL  +52.79 USD 1368 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    STX      | sin PDT: win  70.8% PnL  +49.68 USD 1265 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    TER      | sin PDT: win  70.2% PnL  +42.77 USD 1142 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    AMD      | sin PDT: win  68.1% PnL  +35.40 USD 1139 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    LRCX     | sin PDT: win  69.7% PnL  +34.09 USD  994 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+----------------------------------------------------------------------
+
+CONFIGURACION #9  [grueso+fino]
+  SIN PDT:     win  68.0% | PnL +2217.46 USD | 309,492 trades | PF 1.07
+  CON PDT:     win  68.0% | PnL  +404.99 USD | 85,642 trades | PF 1.07  (-72% trades)
+  Impacto PDT: ALTO
+  EMA 2/8  RSI periodo 5 umbral <60  SL 1.1%  TP 0.5%
+  EMA50: No  Ventana cruce: 3 velas  Precio minimo: 10 USD
+  Simbolos rentables: 348 sin PDT / 291 con PDT
+  Top simbolos: WDC(70.4%), STX(71.2%), TER(70.0%), MU(67.8%), AMD(68.1%), LRCX(69.1%), JBL(71.7%), KLAC(70.8%), PWR(71.1%), APA(69.9%)
+    WDC      | sin PDT: win  70.4% PnL  +51.03 USD 1385 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    STX      | sin PDT: win  71.2% PnL  +46.53 USD 1277 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    TER      | sin PDT: win  70.0% PnL  +43.50 USD 1167 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    MU       | sin PDT: win  67.8% PnL  +36.01 USD 1275 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    AMD      | sin PDT: win  68.1% PnL  +32.68 USD 1143 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+----------------------------------------------------------------------
+
+CONFIGURACION #10  [grueso+fino]
+  SIN PDT:     win  68.0% | PnL +2211.60 USD | 307,483 trades | PF 1.07
+  CON PDT:     win  68.0% | PnL  +377.04 USD | 85,863 trades | PF 1.07  (-72% trades)
+  Impacto PDT: ALTO
+  EMA 2/8  RSI periodo 9 umbral <55  SL 1.1%  TP 0.5%
+  EMA50: No  Ventana cruce: 3 velas  Precio minimo: 10 USD
+  Simbolos rentables: 334 sin PDT / 295 con PDT
+  Top simbolos: WDC(70.2%), STX(70.8%), TER(70.2%), AMD(68.1%), LRCX(69.7%), PWR(71.8%), APA(70.1%), KLAC(70.4%), INTC(68.1%), MU(67.3%)
+    WDC      | sin PDT: win  70.2% PnL  +52.79 USD 1368 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    STX      | sin PDT: win  70.8% PnL  +49.68 USD 1265 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    TER      | sin PDT: win  70.2% PnL  +42.77 USD 1142 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    AMD      | sin PDT: win  68.1% PnL  +35.40 USD 1139 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+    LRCX     | sin PDT: win  69.7% PnL  +34.09 USD  994 trades | con PDT: win   0.0% PnL   +0.00 USD    0 trades
+----------------------------------------------------------------------
+
+CONFIGURACIONES A EVITAR (peores 3):
+  EMA 3/13 RSI14<70 SL0.4% TP1.5% -> win 23.2% PnL -465.25 USD
+  EMA 3/8 RSI14<70 SL0.4% TP1.5% -> win 23.2% PnL -491.44 USD
+  EMA 3/8 RSI14<70 SL0.4% TP1.5% -> win 23.2% PnL -508.24 USD
+
+======================================================================

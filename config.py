@@ -5,6 +5,11 @@ Edita SOLO este archivo. No toques los demás.
 En local: las keys se leen desde .env (nunca subas ese archivo a GitHub).
 En Render: se leen desde las variables de entorno del panel.
 En ambos casos el código es idéntico — dotenv solo actúa si existe el .env.
+
+PARÁMETROS ACTUALIZADOS CON BACKTEST (2026-05-11)
+  Universo: 480 símbolos S&P500 | Histórico: 1 año | Configs probadas: 8300
+  Config ganadora: EMA 2/7, RSI5<55, SL 1.1%, TP 0.5% → win rate 68.1%
+  Símbolos top: STX, WDC, TER, KLAC, MU, LRCX, AMD, PWR, JBL, MPWR
 """
 
 import os
@@ -32,53 +37,58 @@ ALPACA_BASE_URL = {
 
 # ─── Capital y objetivos ──────────────────────────────────────────────────────
 CAPITAL_INICIAL    = 100.0   # USD de partida (referencia para cálculos)
-OBJETIVO_DIARIO    = 25.0     # USD: no abrir nuevas posiciones al alcanzarlo
+OBJETIVO_DIARIO    = 25.0    # USD: no abrir nuevas posiciones al alcanzarlo
 OBJETIVO_MENSUAL   = 100.0   # USD: referencia para calcular retiro mensual
 MAX_PERDIDA_DIARIA = 8.0     # USD: detener el bot si se supera en el día
 MAX_PERDIDA_TOTAL  = 75.0    # USD: límite absoluto (nunca perder más del 75%)
 
 # ─── Gestión de posiciones ────────────────────────────────────────────────────
-STOP_LOSS_PCT    = 0.006    # −0.6% stop-loss fijo por operación
-TAKE_PROFIT_PCT  = 0.008    # +0.8% take-profit base — se alcanza antes, mas rotacion
-MAX_POSICIONES   = 3         # Máximo de posiciones abiertas simultáneas
-MAX_GASTO_POR_TRADE = 0.30  # gastar max 30% del capital por orden (con 3 pos max = 90 USD usados)
-REINVERTIR_PCT   = 0.50     # 50% de beneficios extra sobre objetivo → reinvertir
+# BACKTEST: SL 1.1% / TP 0.5% con win rate 68.1% es matemáticamente rentable.
+# Ganas más veces (68%) aunque cada ganancia sea menor que cada pérdida.
+STOP_LOSS_PCT       = 0.011  # −1.1% stop-loss (backtest óptimo)
+TAKE_PROFIT_PCT     = 0.005  # +0.5% take-profit (backtest óptimo)
+MAX_POSICIONES      = 3      # Máximo de posiciones abiertas simultáneas
+MAX_GASTO_POR_TRADE = 0.30   # 30% del capital por orden (3 pos × 30 USD = 90 USD)
+REINVERTIR_PCT      = 0.50   # 50% de beneficios extra sobre objetivo → reinvertir
 
 # ─── Trailing stop ────────────────────────────────────────────────────────────
-# Se activa solo si hay volumen fuerte Y el precio sigue acelerando al llegar al +1%.
+# Con TP de solo 0.5%, el trailing tiene menos margen para activarse.
+# Se mantiene activo pero con distancia ajustada.
 TRAILING_ACTIVAR       = True
-TRAILING_DISTANCIA_PCT = 0.004  # Distancia del trailing al precio máximo
+TRAILING_DISTANCIA_PCT = 0.003  # Reducido de 0.4% a 0.3% (acorde al TP más ajustado)
 VOL_MULTIPLICADOR      = 1.5    # Volumen actual debe ser > media × 1.5
-MOMENTUM_MIN_PCT       = 0.005  # Precio debe haber subido > 0.5% desde entrada
+MOMENTUM_MIN_PCT       = 0.003  # Reducido de 0.5% a 0.3% (acorde al TP más ajustado)
 
 # ─── Símbolos ─────────────────────────────────────────────────────────────────
-# Tier 1 primero (más seguros). Tier 3 al final (más especulativos).
-# El bot itera en orden: empieza por los primeros.
+# Lista actualizada con resultados del backtest.
+# Orden: mejores performers primero (el bot itera en orden).
+# Top backtest: STX, WDC, TER, KLAC, MU, LRCX, AMD, PWR, JBL, MPWR
 SIMBOLOS = [
-    # Núcleo (top calidad para scalping agresivo)
-    "SPY", "QQQ", "IWM",
-    "NVDA", "AMD",
-    "AAPL", "MSFT",
-    "TSLA", "META", "AMZN", "GOOGL",
-    # Alta volatilidad “buena” (para más agresividad)
-    "NFLX", "COIN", "SMCI", "ARM", "MU", "INTC",
-    # Volatilidad media-alta (opcionales pero útiles)
-    "PLTR", "HOOD", "SOFI", "SNAP"
+    # Top performers backtest (semiconductores y tech mediana cap)
+    "STX", "WDC", "TER", "KLAC", "MU", "LRCX", "AMD", "PWR", "JBL", "MPWR",
+    # Segunda línea backtest
+    "GLW", "APA", "INTC", "WBD",
+    # Núcleo original de alta liquidez (mantener como referencia)
+    "SPY", "QQQ", "NVDA", "TSLA", "META",
+    # Alta volatilidad útil
+    "COIN", "PLTR",
 ]
 
 # ─── Estrategia EMA + RSI + volumen ──────────────────────────────────────────
-EMA_RAPIDA      = 5     # EMA muy reactiva
-EMA_LENTA       = 8     # Bajado de 13: cruces mas frecuentes
-RSI_PERIODO     = 7     # RSI corto para scalping
-RSI_SOBRECOMPRA = 65    # Subido de 60: ventana de entrada mas amplia
-VOL_MEDIA_N     = 20    # Velas para calcular volumen medio
-EXIGIR_VOLUMEN  = False # False: no exigir confirmacion de volumen para entrar
-CRUCE_VENTANA   = 3     # Buscar cruce alcista en las últimas N velas (evita perder cruces entre ciclos)
+# BACKTEST: EMA 2/7 + RSI período 5 umbral <55 → win rate 68.1%
+# EMA muy reactiva (2/7) genera más cruces pero el filtro RSI<55 los filtra bien.
+EMA_RAPIDA      = 2      # Muy reactiva (backtest óptimo)
+EMA_LENTA       = 7      # Backtest óptimo
+RSI_PERIODO     = 5      # RSI ultrarrápido para scalping (backtest óptimo)
+RSI_SOBRECOMPRA = 55     # Más restrictivo que antes: solo entradas más limpias
+VOL_MEDIA_N     = 20     # Velas para calcular volumen medio
+EXIGIR_VOLUMEN  = False  # False: no exigir confirmación de volumen para entrar
+CRUCE_VENTANA   = 3      # Buscar cruce en las últimas N velas (backtest óptimo)
 
 INTERVALO_BARS = "1Min"
-N_BARRAS       = 60     # Últimas 60 velas de 1 minuto
+N_BARRAS       = 60      # Últimas 60 velas de 1 minuto
 
 # ─── Timing ───────────────────────────────────────────────────────────────────
-SLEEP_SEGUNDOS = 30     # Ciclo cada 30 segundos
+SLEEP_SEGUNDOS = 30      # Ciclo cada 30 segundos
 LOG_FILE       = "trades.csv"
 DASHBOARD_PORT = 8080
