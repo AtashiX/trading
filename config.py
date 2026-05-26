@@ -45,8 +45,8 @@ MAX_PERDIDA_TOTAL  = 75.0    # USD: límite absoluto (nunca perder más del 75%)
 # ─── Gestión de posiciones ────────────────────────────────────────────────────
 # BACKTEST: SL 1.1% / TP 0.5% con win rate 68.1% es matemáticamente rentable.
 # Ganas más veces (68%) aunque cada ganancia sea menor que cada pérdida.
-STOP_LOSS_PCT       = 0.011  # −1.1% stop-loss (backtest óptimo)
-TAKE_PROFIT_PCT     = 0.005  # +0.5% take-profit (backtest óptimo)
+STOP_LOSS_PCT       = 0.006  # −0.6% revertido: 1.1% no cubre spread real
+TAKE_PROFIT_PCT     = 0.008  # +0.8% revertido: 0.5% no cubre spread real
 MAX_POSICIONES      = 3      # Máximo de posiciones abiertas simultáneas
 MAX_GASTO_POR_TRADE = 0.30   # 30% del capital por orden (3 pos × 30 USD = 90 USD)
 REINVERTIR_PCT      = 0.50   # 50% de beneficios extra sobre objetivo → reinvertir
@@ -55,9 +55,9 @@ REINVERTIR_PCT      = 0.50   # 50% de beneficios extra sobre objetivo → reinve
 # Con TP de solo 0.5%, el trailing tiene menos margen para activarse.
 # Se mantiene activo pero con distancia ajustada.
 TRAILING_ACTIVAR       = True
-TRAILING_DISTANCIA_PCT = 0.003  # Reducido de 0.4% a 0.3% (acorde al TP más ajustado)
+TRAILING_DISTANCIA_PCT = 0.004  # Restaurado
 VOL_MULTIPLICADOR      = 1.5    # Volumen actual debe ser > media × 1.5
-MOMENTUM_MIN_PCT       = 0.003  # Reducido de 0.5% a 0.3% (acorde al TP más ajustado)
+MOMENTUM_MIN_PCT       = 0.005  # Restaurado
 
 # ─── Símbolos ─────────────────────────────────────────────────────────────────
 # Lista actualizada con resultados del backtest.
@@ -77,13 +77,14 @@ SIMBOLOS = [
 # ─── Estrategia EMA + RSI + volumen ──────────────────────────────────────────
 # BACKTEST: EMA 2/7 + RSI período 5 umbral <55 → win rate 68.1%
 # EMA muy reactiva (2/7) genera más cruces pero el filtro RSI<55 los filtra bien.
-EMA_RAPIDA      = 2      # Muy reactiva (backtest óptimo)
-EMA_LENTA       = 7      # Backtest óptimo
-RSI_PERIODO     = 5      # RSI ultrarrápido para scalping (backtest óptimo)
+EMA_RAPIDA      = 5      # Revertido: EMA 2 genera demasiados cruces falsos
+EMA_LENTA       = 13     # Revertido: EMA 7 demasiado reactiva en práctica
+RSI_PERIODO     = 7      # Revertido: RSI 5 demasiado ruidoso
 RSI_SOBRECOMPRA = 55     # Más restrictivo que antes: solo entradas más limpias
 VOL_MEDIA_N     = 20     # Velas para calcular volumen medio
 EXIGIR_VOLUMEN  = False  # False: no exigir confirmación de volumen para entrar
-CRUCE_VENTANA   = 3      # Buscar cruce en las últimas N velas (backtest óptimo)
+CRUCE_VENTANA   = 3      # Buscar cruce en las últimas N velas
+COOLDOWN_MINUTOS = 5    # Minutos mínimos entre operaciones del mismo símbolo
 
 INTERVALO_BARS = "1Min"
 N_BARRAS       = 60      # Últimas 60 velas de 1 minuto

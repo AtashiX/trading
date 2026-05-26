@@ -68,6 +68,10 @@ risk = RiskManager()
 # el hilo del bot y el hilo de Flask.
 risk_lock = Lock()
 
+# Cooldown: registro de cuándo se cerró cada símbolo por última vez.
+# Evita reentrar en el mismo símbolo inmediatamente tras un cierre.
+_ultimo_cierre: dict[str, datetime] = {}
+
 # ─── Zona horaria del mercado ─────────────────────────────────────────────────
 ET = zoneinfo.ZoneInfo("America/New_York")
 MARKET_OPEN  = dtime(9, 30)
@@ -229,25 +233,79 @@ def abrir_posicion(simbolo: str, precio: float):
         logger.error(f"Error abriendo {simbolo}: {e}")
 
 
+def _precio_ejecucion_real(orden_id: str, intentos: int = 6, espera: float = 0.5) -> float | None:
+    """
+    Consulta el precio de ejecución real de una orden ya completada.
+    Reintenta hasta `intentos` veces con `espera` segundos entre intentos
+    para dar tiempo a Alpaca a rellenar el filled_avg_price.
+    Retorna None si no consigue el precio en el tiempo dado.
+    """
+    from alpaca.trading.requests import GetOrderByIdRequest
+    for _ in range(intentos):
+        try:
+            orden = trading_client.get_order_by_id(orden_id)
+            if orden.filled_avg_price and float(orden.filled_avg_price) > 0:
+                return float(orden.filled_avg_price)
+        except Exception:
+            pass
+        time.sleep(espera)
+    return None
+
+
 def cerrar_posicion(simbolo: str, posicion, motivo: str):
     try:
         qty     = abs(float(posicion.qty))
         entrada = float(posicion.avg_entry_price)
-        actual  = float(posicion.current_price)
-        pnl     = (actual - entrada) * qty
-        trading_client.close_position(simbolo)
-        with risk_lock:  # FIX 4
+        # Precio estimado para usar como fallback si Alpaca tarda en confirmar
+        precio_estimado = float(posicion.current_price)
+
+        orden = trading_client.close_position(simbolo)
+
+        # Intentar obtener el precio real de ejecución de Alpaca
+        precio_real = None
+        if hasattr(orden, "id") and orden.id:
+            precio_real = _precio_ejecucion_real(str(orden.id))
+
+        actual = precio_real if precio_real else precio_estimado
+        pnl    = (actual - entrada) * qty
+
+        if precio_real:
+            logger.debug(f"Precio ejecución real {simbolo}: {precio_real:.4f} "
+                         f"(estimado: {precio_estimado:.4f}, "
+                         f"diff: {precio_real - precio_estimado:+.4f})")
+        else:
+            logger.debug(f"Precio ejecución {simbolo}: usando estimado {precio_estimado:.4f}")
+
+        with risk_lock:
             risk.registrar_cierre(simbolo, pnl)
         registrar_csv(simbolo, "sell", qty, actual, pnl, motivo)
         logger.info(f"CIERRE {simbolo} [{motivo}]: {pnl:+.4f} USD")
+        # Registrar timestamp de cierre para cooldown
+        _ultimo_cierre[simbolo] = datetime.now(timezone.utc)
     except Exception as e:
-        logger.error(f"Error cerrando {simbolo}: {e}")
+        error_str = str(e)
+        if "40310100" in error_str or "pattern day trading" in error_str.lower():
+            # PDT: Alpaca bloquea el cierre. La posición sigue abierta en Alpaca.
+            # Eliminamos del trailing para no re-intentar en cada ciclo,
+            # pero NO contabilizamos PnL — se cerrará al final del día por Alpaca.
+            logger.warning(
+                f"PDT bloqueó cierre de {simbolo} [{motivo}]. "
+                f"Posición excluida del ciclo hasta cierre automático de Alpaca. "
+                f"Solución: desactivar PDT en panel de Alpaca paper."
+            )
+            with risk_lock:
+                risk.trailing.pop(simbolo, None)
+        else:
+            logger.error(f"Error cerrando {simbolo}: {e}")
 
 
 # ─── Ciclo principal ──────────────────────────────────────────────────────────
 
 def ciclo():
     posiciones = posiciones_abiertas()
+    # Set local para evitar abrir el mismo símbolo dos veces en el mismo ciclo
+    # antes de que Alpaca o el trailing dict confirmen la posición
+    abiertos_este_ciclo: set[str] = set()
 
     for simbolo in config.SIMBOLOS:
         try:
@@ -260,31 +318,47 @@ def ciclo():
             # FIX 2 — Usar precio real de quote para evaluar SL/TP/trailing
             precio = obtener_precio_real(simbolo) or float(ult["close"])
 
-            # Gestión de posición existente
-            if simbolo in posiciones:
-                with risk_lock:  # FIX 4
-                    accion = risk.evaluar_posicion(simbolo, precio, vol_actual, vol_media)
-                if accion == "salir_take":
-                    cerrar_posicion(simbolo, posiciones[simbolo], "take-profit")
-                elif accion == "salir_stop":
-                    cerrar_posicion(simbolo, posiciones[simbolo], "stop-loss")
-                elif accion == "salir_trail":
-                    cerrar_posicion(simbolo, posiciones[simbolo], "trailing-stop")
+            # Gestión de posición existente (Alpaca + trailing dict + este ciclo)
+            en_alpaca   = simbolo in posiciones
+            en_trailing = simbolo in risk.trailing
+            en_ciclo    = simbolo in abiertos_este_ciclo
+            if en_alpaca or en_trailing or en_ciclo:
+                if en_alpaca:
+                    with risk_lock:
+                        accion = risk.evaluar_posicion(simbolo, precio, vol_actual, vol_media)
+                    if accion == "salir_take":
+                        cerrar_posicion(simbolo, posiciones[simbolo], "take-profit")
+                    elif accion == "salir_stop":
+                        cerrar_posicion(simbolo, posiciones[simbolo], "stop-loss")
+                    elif accion == "salir_trail":
+                        cerrar_posicion(simbolo, posiciones[simbolo], "trailing-stop")
                 continue
 
-            # Nueva entrada
+            # Nueva entrada — verificar cooldown primero
+            if simbolo in _ultimo_cierre:
+                segundos_desde_cierre = (
+                    datetime.now(timezone.utc) - _ultimo_cierre[simbolo]
+                ).total_seconds()
+                cooldown_seg = config.COOLDOWN_MINUTOS * 60
+                if segundos_desde_cierre < cooldown_seg:
+                    restante = int((cooldown_seg - segundos_desde_cierre) / 60)
+                    logger.debug(f"{simbolo}: cooldown activo ({restante} min restantes)")
+                    continue
+
             hay_señal, motivo_señal = señal_entrada(df, simbolo)
             logger.debug(f"{simbolo}: señal={hay_señal} | {motivo_señal} "
                          f"| precio={precio:.4f}")
             if not hay_señal:
                 continue
 
-            with risk_lock:  # FIX 4
+            with risk_lock:
                 ok, motivo_bloqueo = risk.puede_operar()
             if not ok:
                 logger.info(f"Señal {simbolo} bloqueada: {motivo_bloqueo}")
                 continue
+
             abrir_posicion(simbolo, precio)
+            abiertos_este_ciclo.add(simbolo)  # bloquear duplicado en este ciclo
 
         except Exception as e:
             logger.error(f"Error {simbolo}: {e}")
